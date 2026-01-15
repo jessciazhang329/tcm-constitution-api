@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>中医辨证结果查询</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        margin: 0;
+        padding: 24px;
+        background: #f6f8fa;
+        color: #1f2328;
+      }
+      h1 {
+        margin: 0 0 16px;
+        font-size: 24px;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: grid;
+        gap: 16px;
+      }
+      .card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      label {
+        display: block;
+        margin: 10px 0 6px;
+        font-weight: 600;
+      }
+      input[type="text"],
+      input[type="password"],
+      textarea,
+      select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px;
+        border: 1px solid #d0d7de;
+        border-radius: 8px;
+        background: #fff;
+        font-size: 14px;
+      }
+      textarea {
+        min-height: 100px;
+        resize: vertical;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+      }
+      button {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 8px;
+        background: #0969da;
+        color: #fff;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      button.secondary {
+        background: #57606a;
+      }
+      button:disabled {
+        background: #8c959f;
+        cursor: not-allowed;
+      }
+      .result {
+        margin-top: 12px;
+        background: #f6f8fa;
+        border-radius: 8px;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .note {
+        color: #57606a;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+      .tag {
+        display: inline-block;
+        padding: 2px 8px;
+        background: #ddf4ff;
+        color: #0969da;
+        border-radius: 999px;
+        font-size: 12px;
+      }
+      .divider {
+        height: 1px;
+        background: #eaeef2;
+        margin: 16px 0;
+      }
+    </style>
+</head>
+<body>
+<div class="container">
+      <h1>中医舌诊/面诊/体质辨证 - 前端演示</h1>
+
+      <div class="card">
+        <h2>✅ 使用说明</h2>
+        <p class="note">
+          本页面仅展示上传图片与症状输入的使用体验。系统内部会调用舌诊、面诊与体质辨证接口，
+          无需用户填写任何 API 信息。如提示“配置缺失”，请联系管理员完成后台配置。
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>🧾 体质辨证（自建 API）</h2>
+        <label>症状描述（中文）</label>
+        <textarea
+          id="symptomsText"
+          placeholder="例如：最近容易疲劳、说话声音低、稍微活动就出汗..."
+        ></textarea>
+        <div class="row">
+          <div>
+            <label>年龄（可选）</label>
+            <input id="metaAge" type="text" placeholder="28" />
+          </div>
+          <div>
+            <label>性别（可选）</label>
+            <select id="metaSex">
+              <option value="">不填写</option>
+              <option value="M">男</option>
+              <option value="F">女</option>
+            </select>
+          </div>
+          <div>
+            <label>地区（可选）</label>
+            <input id="metaRegion" type="text" placeholder="CN" />
+          </div>
+        </div>
+        <div class="row" style="margin-top: 12px;">
+          <button onclick="runConstitution()">获取体质辨证结果</button>
+          <button class="secondary" onclick="clearResult('constitutionResult')">清空结果</button>
+        </div>
+        <div id="constitutionResult" class="result">等待请求...</div>
+    </div>
+
+      <div class="card">
+        <h2>🧾 体质辨证（自建 API）</h2>
+        <label>症状描述（中文）</label>
+        <textarea
+          id="symptomsText"
+          placeholder="例如：最近容易疲劳、说话声音低、稍微活动就出汗..."
+        ></textarea>
+        <div class="row">
+          <div>
+            <label>年龄（可选）</label>
+            <input id="metaAge" type="text" placeholder="28" />
+          </div>
+          <div>
+            <label>性别（可选）</label>
+            <select id="metaSex">
+              <option value="">不填写</option>
+              <option value="M">男</option>
+              <option value="F">女</option>
+            </select>
+    </div>
+          <div>
+            <label>地区（可选）</label>
+            <input id="metaRegion" type="text" placeholder="CN" />
+    </div>
+        </div>
+        <div class="row" style="margin-top: 12px;">
+          <button onclick="runConstitution()">调用体质辨证 API</button>
+          <button class="secondary" onclick="clearResult('constitutionResult')">清空结果</button>
+        </div>
+        <div id="constitutionResult" class="result">等待请求...</div>
+      </div>
+
+      <div class="card">
+        <h2>🚀 操作提示</h2>
+        <p class="note">
+          当前页面仅启用体质辨证接口。舌诊/面诊尚未配置 appid/appKey，因此暂不提供。
+        </p>
+        </div>
+
+      <div class="card">
+        <h2>免责声明</h2>
+        <p class="note">
+          本页面仅用于体质倾向性分析演示，不构成医疗诊断。不提供处方或用药建议。如有健康问题请咨询专业医生或中医师。
+        </p>
+    </div>
+</div>
+
+<script>
+      const CONFIG = {
+        CONSTITUTION_BASE_URL: window.location.origin,
+        CONSTITUTION_API_KEY: "64ded59e680e68c52c91c17e97a953b7",
+      };
+
+      async function runConstitution() {
+        const baseUrl = CONFIG.CONSTITUTION_BASE_URL;
+        const apiKey = CONFIG.CONSTITUTION_API_KEY;
+        const text = document.getElementById("symptomsText").value.trim();
+
+        if (!baseUrl) {
+          renderResult("constitutionResult", { error: "配置缺失，请联系管理员" });
+          return;
+        }
+        if (!text) {
+          renderResult("constitutionResult", { error: "请填写症状描述" });
+            return;
+        }
+
+        const meta = {};
+        const age = document.getElementById("metaAge").value.trim();
+        const sex = document.getElementById("metaSex").value.trim();
+        const region = document.getElementById("metaRegion").value.trim();
+
+        if (age) meta.age = Number(age);
+        if (sex) meta.sex = sex;
+        if (region) meta.region = region;
+
+        const payload = { text, meta: Object.keys(meta).length ? meta : undefined };
+        const url = baseUrl.replace(/\/+$/, "") + "/v1/constitution/estimate";
+
+        const headers = { "Content-Type": "application/json" };
+        if (apiKey) headers.Authorization = "Bearer " + apiKey;
+
+        await postJson(url, payload, headers, "constitutionResult");
+      }
+
+      function clearResult(id) {
+        document.getElementById(id).textContent = "等待请求...";
+      }
+
+      async function postJson(url, payload, headers, resultId) {
+        try {
+          renderResult(resultId, { loading: true });
+          const res = await fetch(url, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(payload),
+          });
+          const text = await res.text();
+          renderResult(resultId, safeJson(text));
+        } catch (err) {
+          renderResult(resultId, { error: String(err) });
+        }
+      }
+
+      function renderResult(id, data) {
+        const el = document.getElementById(id);
+        if (data && data.loading) {
+          el.textContent = "请求中...";
+          return;
+        }
+        el.textContent = JSON.stringify(data, null, 2);
+      }
+
+      function safeJson(text) {
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          return { raw: text };
+        }
+    }
+</script>
+</body>
+</html>

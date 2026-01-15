@@ -10,12 +10,13 @@ import os
 import time
 import uuid
 from typing import Any, Dict, List, Optional
+from pathlib import Path
 
 import anyio
 import uvicorn
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from rules import ConstitutionEvidence, rulebook
@@ -36,6 +37,7 @@ from security import (
 APP_VERSION = "1.1.0"
 MAX_BODY_SIZE = int(os.getenv("MAX_BODY_SIZE", "32768"))
 TIMEOUT_SECONDS = float(os.getenv("REQUEST_TIMEOUT_SECONDS", "5"))
+UI_PATH = Path(__file__).with_name("tcm_diagnosis.html")
 
 API_KEYS = get_api_keys()
 RATE_LIMITER = RateLimiter(get_rate_limit_per_minute())
@@ -213,6 +215,14 @@ async def health_check():
 async def version():
     """版本信息（对外开放）"""
     return {"version": APP_VERSION}
+
+
+@app.get("/ui", include_in_schema=False)
+async def ui_page():
+    """前端页面（同域）"""
+    if not UI_PATH.exists():
+        return HTMLResponse("<h3>UI 页面未找到</h3>", status_code=404)
+    return HTMLResponse(UI_PATH.read_text(encoding="utf-8"))
 
 
 @app.post("/v1/constitution/estimate", response_model=ConstitutionResponse, dependencies=[Depends(verify_api_key)])
