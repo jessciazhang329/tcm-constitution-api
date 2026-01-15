@@ -112,10 +112,8 @@
 
       <div class="card">
         <h2>✅ 使用说明</h2>
-        <p class="note">
-          本页面仅展示上传图片与症状输入的使用体验。系统内部会调用舌诊、面诊与体质辨证接口，
-          无需用户填写任何 API 信息。如提示“配置缺失”，请联系管理员完成后台配置。
-        </p>
+        <p class="note" id="originNotice"></p>
+        <p class="note" id="originWarning" style="color: #b42318;"></p>
       </div>
 
       <div class="card">
@@ -144,8 +142,9 @@
           </div>
         </div>
         <div class="row" style="margin-top: 12px;">
-          <button onclick="runConstitution()">获取体质辨证结果</button>
+          <button id="runBtn" onclick="runConstitution()">获取体质辨证结果</button>
           <button class="secondary" onclick="clearResult('constitutionResult')">清空结果</button>
+          <button class="secondary" onclick="testHealth()">测试 /health</button>
         </div>
         <div id="constitutionResult" class="result">等待请求...</div>
     </div>
@@ -203,6 +202,19 @@
         CONSTITUTION_API_KEY: "64ded59e680e68c52c91c17e97a953b7",
       };
 
+      const originNotice = document.getElementById("originNotice");
+      const originWarning = document.getElementById("originWarning");
+      const runBtn = document.getElementById("runBtn");
+
+      originNotice.textContent =
+        "当前页面来源：" + window.location.origin + "（推荐通过 /ui 同域访问）";
+
+      if (window.location.protocol === "file:") {
+        originWarning.textContent =
+          "你正在使用 file:// 打开页面，浏览器会阻止跨域请求。请使用：https://tcm-constitution-api.onrender.com/ui";
+        if (runBtn) runBtn.disabled = true;
+      }
+
       async function runConstitution() {
         const baseUrl = CONFIG.CONSTITUTION_BASE_URL;
         const apiKey = CONFIG.CONSTITUTION_API_KEY;
@@ -235,17 +247,27 @@
         await postJson(url, payload, headers, "constitutionResult");
       }
 
+      async function testHealth() {
+        const baseUrl = CONFIG.CONSTITUTION_BASE_URL;
+        if (!baseUrl) {
+          renderResult("constitutionResult", { error: "配置缺失，请联系管理员" });
+          return;
+        }
+        const url = baseUrl.replace(/\/+$/, "") + "/health";
+        await postJson(url, null, {}, "constitutionResult", "GET");
+      }
+
       function clearResult(id) {
         document.getElementById(id).textContent = "等待请求...";
       }
 
-      async function postJson(url, payload, headers, resultId) {
+      async function postJson(url, payload, headers, resultId, method = "POST") {
         try {
           renderResult(resultId, { loading: true });
           const res = await fetch(url, {
-            method: "POST",
+            method,
             headers,
-            body: JSON.stringify(payload),
+            body: payload ? JSON.stringify(payload) : undefined,
           });
           const text = await res.text();
           renderResult(resultId, safeJson(text));
