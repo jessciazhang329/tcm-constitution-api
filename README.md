@@ -75,10 +75,10 @@ docker compose up --build
 
 ## API 端点
 
-所有接口需要 Header：`Authorization: Bearer <API_KEY>`
+除 `/health` 与 `/version` 外，其余接口需要 Header：`Authorization: Bearer <API_KEY>`
 
-- `GET /health`
-- `GET /version`
+- `GET /health`（无需鉴权，供平台健康检查）
+- `GET /version`（无需鉴权）
 - `POST /v1/constitution/estimate`
 
 ### POST /v1/constitution/estimate

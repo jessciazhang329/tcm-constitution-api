@@ -1,0 +1,13 @@
+version: "3.8"
+services:
+  constitution-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      API_KEYS: "your_api_key_here"
+      RATE_LIMIT_PER_MIN: "60"
+      REQUEST_TIMEOUT_SECONDS: "5"
+      MAX_BODY_SIZE: "32768"
+      ALLOWED_ORIGINS: ""
+    restart: unless-stopped

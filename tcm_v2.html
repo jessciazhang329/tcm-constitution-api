@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 中医智能辨证系统 (API版)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 40px; font-weight: 600; }
+        .section { margin-bottom: 35px; padding: 25px; border: 1px solid #e1e4e8; border-radius: 10px; background-color: #fafbfc; }
+        .section h2 { font-size: 20px; margin-top: 0; border-left: 5px solid #007bff; padding-left: 15px; color: #2c3e50; }
+        
+        /* 输入区域样式 */
+        .input-group { margin-top: 15px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; }
+        input[type="text"], textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        textarea { height: 100px; resize: vertical; }
+        
+        .note { font-size: 12px; color: #e67e22; margin-top: 5px; background: #fff8e1; padding: 8px; border-radius: 4px; }
+
+        /* 预览图 */
+        .preview-img { max-width: 200px; max-height: 200px; margin-top: 10px; border-radius: 6px; border: 2px solid #eee; display: none; }
+
+        /* 按钮 */
+        .btn-submit { display: block; width: 100%; padding: 16px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-submit:hover { background-color: #0056b3; }
+        .btn-submit:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+
+        /* 结果展示 */
+        #result-area { margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px; display: none; }
+        .result-box { background: #e8f4fd; padding: 20px; border-radius: 8px; margin-bottom: 15px; border-left: 5px solid #2196F3; }
+        pre { white-space: pre-wrap; word-wrap: break-word; font-family: Consolas, monospace; font-size: 13px; color: #444; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏥 AI 中医辅助诊断系统</h1>
+    
+    <div class="section" style="border-left-color: #ff9800;">
+        <h2>0. API 配置 (必填)</h2>
+        <div class="input-group">
+            <label>AppID (开放平台提供的ID):</label>
+            <input type="text" id="api_appid" placeholder="请输入你的 AppID" value="">
+        </div>
+        <div class="input-group">
+            <label>AppKey (用于生成签名):</label>
+            <input type="text" id="api_appkey" placeholder="请输入你的 AppKey" value="">
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>1. 舌诊分析</h2>
+        <div class="input-group">
+            <label>舌象图片 URL 地址 (API要求必须是网络地址):</label>
+            <input type="text" id="tongueUrl" value="https://img0.baidu.com/it/u=3028604889,2985420658&fm=253&fmt=auto&app=138&f=JPEG?w=667&h=500" oninput="updatePreview('tongueUrl', 'tonguePreview')">
+            <div class="note">⚠️ 注意：此API不支持直接上传本地文件。请先将图片上传到图床(如imgur)获取链接，或使用上方默认测试链接。</div>
+            <img id="tonguePreview" src="https://img0.baidu.com/it/u=3028604889,2985420658&fm=253&fmt=auto&app=138&f=JPEG?w=667&h=500" class="preview-img" style="display:block">
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>2. 面诊分析</h2>
+        <div class="input-group">
+            <label>面部图片 URL 地址:</label>
+            <input type="text" id="faceUrl" placeholder="请输入面部图片URL..." oninput="updatePreview('faceUrl', 'facePreview')">
+            <img id="facePreview" class="preview-img">
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>3. 症状描述</h2>
+        <textarea id="symptoms" placeholder="请输入主要症状（例如：失眠多梦，畏寒肢冷...）"></textarea>
+    </div>
+
+    <button class="btn-submit" onclick="runDiagnosis()" id="btnRun">🚀 开始智能辨证</button>
+
+    <div id="result-area">
+        <div class="result-box">
+            <h3>👅 舌诊 API 返回结果</h3>
+            <pre id="res-tongue">等待分析...</pre>
+        </div>
+        <div class="result-box" style="border-left-color: #9C27B0; background: #fdf0fd;">
+            <h3>😊 面诊 API 返回结果</h3>
+            <pre id="res-face">等待分析...</pre>
+        </div>
+        <div class="result-box" style="border-left-color: #4CAF50; background: #e8f5e9;">
+            <h3>📝 综合建议</h3>
+            <pre id="res-advice">等待分析...</pre>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 接口地址配置
+    const API_TONGUE = "https://www.bjbayes.com/admin/api/tongue_analysis_advance";
+    const API_FACE = "https://www.bjbayes.com/admin/api/face_analysis_v2";
+
+    // 更新图片预览
+    function updatePreview(inputId, imgId) {
+        const url = document.getElementById(inputId).value;
+        const img = document.getElementById(imgId);
+        if(url) {
+            img.src = url;
+            img.style.display = 'block';
+        } else {
+            img.style.display = 'none';
+        }
+    }
+
+    // 生成时间戳 yyyyMMddHHmmss
+    function getTimestamp() {
+        const now = new Date();
+        const pad = n => n < 10 ? '0' + n : n;
+        return now.getFullYear() +
+               pad(now.getMonth() + 1) +
+               pad(now.getDate()) +
+               pad(now.getHours()) +
+               pad(now.getMinutes()) +
+               pad(now.getSeconds());
+    }
+
+    // 生成签名 sign = UPPER(MD5( MD5(timestamp) + appKey ))
+    function generateSign(timestamp, appKey) {
+        if (!appKey) return "";
+        // 第一次 MD5
+        const step1 = CryptoJS.MD5(timestamp).toString();
+        // 第二次 MD5 (timestamp的MD5 + appKey)
+        const step2 = CryptoJS.MD5(step1 + appKey).toString();
+        // 转大写
+        return step2.toUpperCase();
+    }
+
+    // 核心调用逻辑
+    async function runDiagnosis() {
+        const appId = document.getElementById('api_appid').value.trim();
+        const appKey = document.getElementById('api_appkey').value.trim();
+        const tongueUrl = document.getElementById('tongueUrl').value.trim();
+        const faceUrl = document.getElementById('faceUrl').value.trim();
+        const symptoms = document.getElementById('symptoms').value.trim();
+
+        if (!appId || !appKey) {
+            alert("⚠️ 请先在顶部填入您的 AppID 和 AppKey！");
+            return;
+        }
+
+        // UI 状态更新
+        const btn = document.getElementById('btnRun');
+        btn.disabled = true;
+        btn.innerText = "⏳ 正在连接 API 分析中...";
+        document.getElementById('result-area').style.display = 'block';
+        document.getElementById('res-tongue').innerText = "请求发送中...";
+        document.getElementById('res-face').innerText = "请求发送中...";
+
+        try {
+            // 准备并行请求
+            const timestamp = getTimestamp();
+            const sign = generateSign(timestamp, appKey);
+
+            // 构造请求体 (application/x-www-form-urlencoded)
+            const createBody = (imgUrl) => {
+                const params = new URLSearchParams();
+                params.append('appid', appId);
+                params.append('imgpath', imgUrl);
+                params.append('timestamp', timestamp);
+                params.append('version', '1.0');
+                params.append('sign', sign);
+                return params;
+            };
+
+            // 发起舌诊请求
+            const tonguePromise = tongueUrl ? fetch(API_TONGUE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: createBody(tongueUrl)
+            }).then(r => r.json()).catch(e => ({ error: "舌诊请求失败: " + e.message })) : Promise.resolve("未提供舌象图片URL");
+
+            // 发起面诊请求
+            const facePromise = faceUrl ? fetch(API_FACE, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: createBody(faceUrl)
+            }).then(r => r.json()).catch(e => ({ error: "面诊请求失败: " + e.message })) : Promise.resolve("未提供面部图片URL");
+
+            // 等待结果
+            const [tongueRes, faceRes] = await Promise.all([tonguePromise, facePromise]);
+
+            // 显示结果
+            document.getElementById('res-tongue').innerText = JSON.stringify(tongueRes, null, 4);
+            document.getElementById('res-face').innerText = JSON.stringify(faceRes, null, 4);
+            
+            // 简单的症状回显（因为没有提供症状API接口）
+            document.getElementById('res-advice').innerText = "您的主诉症状：" + (symptoms || "无") + "\n\n(注：症状分析API暂未配置，请参考上方舌面诊的 JSON 结果)";
+
+        } catch (error) {
+            alert("发生系统错误：" + error.message);
+            console.error(error);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "🚀 开始智能辨证";
+        }
+    }
+</script>
+
+</body>
+</html>
